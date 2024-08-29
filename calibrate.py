@@ -166,6 +166,8 @@ def parse_args():
                         help="Enable the display of polynoms.")
     parser.add_argument('-dbg', '--debugProcessingMode', default=False, action="store_true",
                         help="Enable processing of images without using the camera.")
+    parser.add_argument('-lrmlo', '--lowResMonoOnly', default=True, action="store_true",
+                        help="")
     options = parser.parse_args()
     # Set some extra defaults, `-brd` would override them
     if options.defaultBoard is not None:
@@ -880,11 +882,33 @@ class Main:
                         (image_shape[1]//2, image_shape[0]//2), font,
                         7, (0, 0, 255),
                         4, cv2.LINE_AA)
-            cv2.namedWindow(self.display_name)
-            if self.args.mouseTrigger:
-                cv2.setMouseCallback(self.display_name, self.mouse_event_callback)
+            if not self.args.lowResMonoOnly:
+                cv2.namedWindow(self.display_name)
+                if self.args.mouseTrigger:
+                    cv2.setMouseCallback(self.display_name, self.mouse_event_callback)
+                cv2.imshow(self.display_name, display_image)
 
-            cv2.imshow(self.display_name, display_image)
+            if self.args.lowResMonoOnly:
+                color_img = None
+                for name, imgFrame in currImageList.items():
+                    color_img = imgFrame
+                    break
+
+                grayscale = cv2.cvtColor(color_img, cv2.COLOR_BGR2GRAY)
+                height, width = grayscale.shape[:2]
+                image_scaling_factor = 10
+                display_scaling_factor = 2
+                grayscale = cv2.resize(grayscale, 
+                                       (width // image_scaling_factor,
+                                        height // image_scaling_factor), 
+                                       interpolation=cv2.INTER_AREA)
+                window_name = 'RGB Camera View'
+                cv2.namedWindow(window_name)
+                cv2.resizeWindow(window_name,
+                                 grayscale.shape[1] * image_scaling_factor * display_scaling_factor,
+                                 grayscale.shape[0] * image_scaling_factor * display_scaling_factor)
+                cv2.imshow(window_name, grayscale)
+
             if combinedCoverageImage is not None:
                 #combinedCoverageImage = cv2.resize(combinedCoverageImage, (0, 0), fx=self.output_scale_factor*2, fy=self.output_scale_factor*2)
                 cv2.imshow("Coverage-Image", combinedCoverageImage)
